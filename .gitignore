@@ -1,0 +1,85 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyc
+*$py.class
+*.so
+.Python
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.cache/
+
+# Local Hugging Face / model caches if created under the repo
+.huggingface/
+huggingface/
+transformers_cache/
+sentence-transformers/
+models/
+checkpoints/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local document corpora (keep folder; ignore contents)
+data/documents/*
+!data/documents/.gitkeep
+
+# Evaluation data: keep Rev 2 HotpotQA subset; ignore other local artefacts
+data/evaluation/*
+!data/evaluation/.gitkeep
+!data/evaluation/hotpotqa_100.json
+
+# Logs and local outputs
+logs/
+*.log
+outputs/
+results/
+tmp/
+temp/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Model and vector-store artefacts (if added later)
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+chroma/
+faiss_index/
+.lance/
+.lancedb/

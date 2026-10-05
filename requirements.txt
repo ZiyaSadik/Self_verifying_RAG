@@ -1,0 +1,10 @@
+# Core Rev 2 dependencies (CPU-friendly).
+# Versions are intentionally unpinned; install current compatible releases.
+
+datasets
+sentence-transformers
+faiss-cpu
+numpy
+torch
+transformers
+requests
