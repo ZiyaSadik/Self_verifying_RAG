@@ -2,142 +2,149 @@
 
 A Self-Verifying Multi-Agent Framework for Trustworthy Retrieval-Augmented Generation
 
-## Current Status
+## Overview
 
-This repository currently contains the **Review 02 (Rev 2) deterministic / offline baseline**.
+Retrieval-Augmented Generation (RAG) can improve factual grounding by conditioning language-model answers on external evidence. In practice, however, retrieval errors, irrelevant passages, unsupported claims, and hallucinations can still undermine reliability.
 
-It includes HotpotQA subset loading, dense retrieval, extractive generation, claim extraction, lexical claim–evidence verification, and evaluation scripts.
+This dissertation project investigates a **self-verifying multi-agent RAG framework** that integrates:
 
-It does **not** yet contain the final multi-agent LLM framework, LLM-based generation, NLI entailment, LLM judges, or iterative LLM correction.
+- retrieval
+- evidence verification
+- generation
+- claim-level verification
+- iterative correction
+- multi-agent coordination
 
-## Rev 2 Pipeline
+The long-term goal is to improve the trustworthiness of RAG responses while accounting for the additional computational and verification cost introduced by these checks.
+
+## Research Objective
+
+To investigate whether an integrated multi-agent framework with evidence-level verification, claim-level verification, and iterative correction can improve the trustworthiness of RAG responses while managing verification cost.
+
+## Proposed Framework
 
 ```
-HotpotQA (100 samples)
-  → within-sample dense retrieval using SentenceTransformers + FAISS
-  → top-10 retrieved evidence
-  → extractive generation from top-3 evidence
-  → deterministic claim extraction
-  → lexical claim–evidence verification against all top-10 evidence
-  → comparison with HotpotQA gold supporting facts
+User Query
+    ↓
+Query Planner Agent
+    ↓
+Retrieval Agent
+    ↓
+Evidence Verification Agent
+    ↓
+Generation Agent
+    ↓
+Claim Verification Agent
+    ↓
+All claims supported?
+    ├── Yes → Final Answer
+    └── No → Critic / Revision Agent
+                    ↓
+              Re-retrieve / Revise
+                    ↓
+              Generate Again
+                    ↓
+             Claim Verification
+                    ↺
 ```
 
-Important clarifications:
+| Component | Role |
+|---|---|
+| Query Planner Agent | Interprets the user question and prepares retrieval-ready sub-queries |
+| Retrieval Agent | Retrieves candidate evidence from the knowledge corpus |
+| Evidence Verification Agent | Filters or ranks retrieved passages for relevance and usefulness |
+| Generation Agent | Produces an answer conditioned on verified evidence |
+| Claim Verification Agent | Checks whether individual answer claims are supported by evidence |
+| Critic / Revision Agent | Triggers revision, re-retrieval, or regeneration when claims are unsupported |
 
-- **No LLM / API is required for Rev 2.** The baseline runs offline after dependencies and the embedding model are available locally.
-- **Lexical claim–evidence support is NOT factual-truth verification.** The verifier measures token-coverage consistency between claims and retrieved evidence.
-- **The current claim extractor is a deterministic sentence splitter.** It is not semantic claim decomposition.
+Some pipeline stages are currently implemented as deterministic research prototypes (dense retrieval, extractive generation, lexical claim–evidence checking). The full LLM-based multi-agent system is under active development.
 
-## Project Structure
+## Current Progress
+
+| Component | Status |
+|---|---|
+| Problem formulation & literature review | Completed |
+| HotpotQA evaluation dataset (100-sample subset) | Completed |
+| Dense retrieval pipeline (SentenceTransformers + FAISS) | Completed |
+| Retrieval evaluation (supporting-fact Recall / Precision) | Completed |
+| Initial extractive generation | Completed |
+| Claim extraction prototype | Completed |
+| Claim–evidence verification prototype | Completed |
+| Initial end-to-end evaluation | Completed |
+| Semantic / entailment-based verification | Planned |
+| Evidence-level verification agent | Planned |
+| Multi-agent orchestration | Planned |
+| Iterative correction loop | Planned |
+| LLM-based generation | Planned |
+| Final comparative evaluation | Planned |
+
+## Current Experimental Results
+
+Early experiments are run on a **100-sample HotpotQA distractor** subset.
+
+| Result | Value |
+|---|---:|
+| Retrieval Recall@5 | 68.08% |
+| Retrieval Recall@10 | 77.53% |
+| End-to-end samples evaluated | 100 |
+
+Additional observations from the initial end-to-end run:
+
+- The lexical claim–evidence verifier produces a high **lexical support** rate.
+- Lexical support is **not** answer accuracy and must not be treated as factual correctness.
+- Comparison with HotpotQA gold supporting facts shows that lexical support does not necessarily align with gold evidence.
+
+**Methodological note:** Current verification is lexical / token-coverage based and is therefore treated as a baseline consistency signal rather than a factual-truth guarantee.
+
+## Technology Stack
+
+- Python
+- SentenceTransformers
+- FAISS
+- Hugging Face Datasets
+- PyTorch
+- Transformers
+- HotpotQA
+- Git / GitHub
+
+The current implementation supports **CPU-only** execution.
+
+## Repository Structure
 
 ```
 Self_verifying_RAG/
 ├── data/
-│   ├── documents/                 # Reserved for future document corpora
-│   └── evaluation/
-│       └── hotpotqa_100.json      # 100 HotpotQA distractor samples (Rev 2)
+│   └── evaluation/          # HotpotQA evaluation subset
 ├── src/
-│   ├── ingestion/
-│   │   └── load_hotpotqa.py       # Optional regenerator for hotpotqa_100.json
-│   ├── retrieval/
-│   │   └── retriever.py           # MiniLM + FAISS dense retriever
-│   ├── generation/
-│   │   └── generator.py           # Deterministic extractive generator
-│   ├── verification/
-│   │   ├── claim_extractor.py     # Sentence-level claim splitter
-│   │   └── claim_verifier.py      # Lexical token-coverage verifier
-│   ├── evaluation/
-│   │   ├── retrieval_metrics.py   # Supporting-fact Recall@k / Precision@k
-│   │   ├── evaluate_retrieval.py  # Retrieval evaluation runner
-│   │   ├── calibrate_verifier.py  # Threshold calibration on HotpotQA proxies
-│   │   └── evaluate_end_to_end.py # Full Rev 2 end-to-end evaluation
-│   ├── agents/                    # Stub only (future multi-agent orchestration)
-│   └── ...
-├── tests/
-│   ├── test_retrieval_metrics.py
-│   └── test_claim_verifier.py
-├── config/                        # Reserved for future experiment configs
-├── notebooks/                     # Reserved for exploratory analysis
-├── .env.example                   # Placeholder env vars only (no secrets)
-├── .gitignore
+│   ├── ingestion/           # Dataset loading utilities
+│   ├── retrieval/           # Dense retrieval
+│   ├── generation/          # Answer generation prototypes
+│   ├── verification/        # Claim extraction and verification
+│   ├── agents/              # Multi-agent orchestration (in development)
+│   └── evaluation/          # Metrics and experiment runners
+├── tests/                   # Unit tests
+├── notebooks/               # Exploratory analysis
+├── config/                  # Experiment configuration
 ├── requirements.txt
 └── README.md
 ```
 
-| Path | Purpose |
-|---|---|
-| `data/evaluation/hotpotqa_100.json` | Saved 100-sample HotpotQA distractor subset used by all Rev 2 evaluations |
-| `src/ingestion/load_hotpotqa.py` | Downloads/saves the 100-sample subset if regeneration is needed |
-| `src/retrieval/retriever.py` | Dense retrieval with within-sample and shared-corpus modes |
-| `src/generation/generator.py` | Concatenates top retrieved sentences into a draft answer |
-| `src/verification/claim_extractor.py` | Splits the answer into sentence-level candidate claims |
-| `src/verification/claim_verifier.py` | Max token-coverage claim–evidence verifier |
-| `src/evaluation/retrieval_metrics.py` | Pure-Python supporting-fact metrics |
-| `src/evaluation/evaluate_retrieval.py` | Reports mean Recall@k / Precision@k |
-| `src/evaluation/calibrate_verifier.py` | Threshold sweep on lexical HotpotQA proxies |
-| `src/evaluation/evaluate_end_to_end.py` | End-to-end Rev 2 pipeline evaluation |
-| `tests/` | Offline unit tests (no model / network required for metric/verifier tests) |
-
-## Requirements
-
-- Python **3.13.9** was used for the current Rev 2 environment.
-- CPU-only execution is supported.
-- No NVIDIA GPU / CUDA is required.
-- Main packages include: `datasets`, `sentence-transformers`, `faiss-cpu`, `numpy`, `torch`, `transformers`, and `requests`.
-- Install dependencies with `requirements.txt` (see Setup).
-
-Package versions are not pinned in this repository; install the current compatible releases via pip.
-
-## Setup
-
-Windows PowerShell:
+## Getting Started
 
 ```powershell
+git clone https://github.com/ZiyaSadik/Self_verifying_RAG.git
+cd Self_verifying_RAG
+
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-No API key is required for Rev 2.
-
-Notes:
-
-- First retrieval / end-to-end run may download the SentenceTransformer model `sentence-transformers/all-MiniLM-L6-v2` into the local Hugging Face cache if it is not already present.
-- Regenerating the HotpotQA subset with `load_hotpotqa.py` requires network access to Hugging Face Datasets. The included `hotpotqa_100.json` is enough for Rev 2 evaluation without regenerating.
-
-## Dataset
-
-This repository includes:
-
-```text
-data/evaluation/hotpotqa_100.json
-```
-
-It contains **100 HotpotQA distractor training examples** used for the Rev 2 evaluation.
-
-To regenerate the dataset if needed:
-
-```powershell
-python src/ingestion/load_hotpotqa.py
-```
-
-## Running Rev 2
-
-Retrieval evaluation:
+Main evaluation commands:
 
 ```powershell
 python src/evaluation/evaluate_retrieval.py
-```
-
-Verifier threshold calibration:
-
-```powershell
 python src/evaluation/calibrate_verifier.py
-```
-
-End-to-end Rev 2 baseline:
-
-```powershell
 python src/evaluation/evaluate_end_to_end.py
 ```
 
@@ -148,66 +155,48 @@ python -m unittest tests.test_retrieval_metrics -v
 python -m unittest tests.test_claim_verifier -v
 ```
 
-## Expected Rev 2 Results
+No API key is required for the current deterministic components. The first retrieval run may download the local embedding model into the Hugging Face cache.
 
-### Retrieval (within-sample supporting-fact metrics)
+## Research Roadmap
 
-| Metric | Value |
-|---|---:|
-| Recall@1 | 0.2848 |
-| Precision@1 | 0.6700 |
-| Recall@3 | 0.5483 |
-| Precision@3 | 0.4400 |
-| Recall@5 | 0.6808 |
-| Precision@5 | 0.3280 |
-| Recall@10 | 0.7753 |
-| Precision@10 | 0.1860 |
+1. Establish retrieval and evidence-quality baselines
+2. Develop evidence-level verification
+3. Introduce semantic claim verification
+4. Implement specialized RAG agents
+5. Add iterative correction / re-retrieval
+6. Introduce LLM-based generation and verification
+7. Compare baseline RAG against progressively stronger verification configurations
+8. Evaluate trustworthiness, factuality, retrieval quality, and verification cost
 
-### End-to-end lexical claim–evidence evaluation
+## Research Questions / Evaluation Direction
 
-| Quantity | Value |
-|---|---:|
-| Evaluated samples | 100 |
-| Total claims | 318 |
-| Supported claims | 316 |
-| Unsupported claims | 2 |
-| Overall lexical claim support rate | 0.9937 |
-| Claims whose matched evidence is gold supporting fact | 140 |
-| Supported claims matched to gold supporting fact | 139 |
-| Gold-support match rate among supported claims | 0.4399 |
+Future experiments will compare configurations such as:
 
-Interpretation (critical):
+- Standard RAG
+- RAG + evidence verification
+- RAG + claim verification
+- RAG + iterative correction
+- Full self-verifying multi-agent RAG
 
-- The **0.9937** overall claim support rate **must not** be interpreted as factual accuracy. The verifier is lexical token-coverage based and checks whether generated claims are covered by retrieved evidence text.
-- The **0.4399** gold-support match rate is a **separate** comparison of matched evidence against HotpotQA gold supporting-fact pairs. It is also **not** the verifier’s factual accuracy.
+Evaluation dimensions under consideration:
 
-## Important Rev 2 Limitations
+- retrieval quality
+- answer correctness
+- faithfulness / groundedness
+- unsupported claim rate
+- evidence quality
+- correction success
+- verification cost / latency
 
-- Deterministic extractive generator (not an LLM)
-- Deterministic sentence-based claim extraction (not semantic claim decomposition)
-- Lexical token-coverage verifier
-- No semantic entailment / NLI
-- No LLM judge
-- No multi-agent orchestration yet
-- No iterative LLM-based correction yet
-- Lexical support does not establish factual truth
-- Current threshold calibration uses HotpotQA supporting-fact lexical proxies and is a **sanity check**, not a factual-truth benchmark
+## Limitations of the Current Implementation
 
-## Next Phase
+- Generation is currently deterministic and extractive.
+- Claim extraction is rule-based (sentence segmentation).
+- Claim–evidence verification uses lexical token coverage.
+- Semantic entailment / NLI is not yet part of the active pipeline.
+- Full multi-agent orchestration remains under development.
+- Lexical support is a consistency signal, not a factual-truth guarantee.
 
-Intended future architecture (not implemented yet):
+## Disclaimer
 
-```
-User Query
-  → Query Planner Agent
-  → Retrieval Agent
-  → Evidence Verification Agent
-  → Generation Agent
-  → Claim Verification Agent
-  → Critic / Revision Agent
-  → Re-retrieval / Revision
-  → Re-verification
-  → Final Answer
-```
-
-This multi-agent LLM pipeline is planned for later dissertation stages and is **not** present in the current Rev 2 codebase.
+This repository is an evolving research implementation developed for postgraduate dissertation work. Architecture details and experimental results may change as the framework is extended and more thoroughly evaluated.
